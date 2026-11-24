@@ -1,0 +1,73 @@
+# Run: cp ../lecture-code/part3_verifiers/repair_loop.py . && python repair_loop.py --mock --spec LinearSearch.spec.dfy
+SPEC (fixed, the model cannot change it)
+// HW 8-2: linear search. Signature, requires and ensures only; the body is missing on purpose.
+// Intended behaviour (like Python's list.index, but returning -1): the index of the
+// FIRST occurrence of key in a, or -1 if key does not occur.
+method LinearSearch(a: array<int>, key: int) returns (i: int)
+  ensures 0 <= i ==> i < a.Length && a[i] == key
+  ensures i < 0 ==> forall j :: 0 <= j < a.Length ==> a[j] != key
+
+
+===== Round 1: model's body =====
+{
+  i := 0;
+  while i < a.Length
+  {
+    if a[i] == key { return; }
+    i := i + 1;
+  }
+  i := -1;
+}
+
+----- Round 1: verifier says -----
+Candidate.dfy(7,0): Error: a postcondition could not be proved on this return path
+  |
+7 | {
+  | ^
+
+Candidate.dfy(6,20): Related location: this is the postcondition that could not be proved
+  |
+6 |   ensures i < 0 ==> forall j :: 0 <= j < a.Length ==> a[j] != key
+  |                     ^^^^^^
+
+
+Dafny program verifier finished with 1 verified, 1 error
+
+===== Round 2: model's body =====
+{
+  i := 0;
+  while i < a.Length
+    invariant forall j :: 0 <= j < i ==> a[j] != key
+  {
+    if a[i] == key { return; }
+    i := i + 1;
+  }
+  i := -1;
+}
+
+----- Round 2: verifier says -----
+Candidate.dfy(10,42): Error: index out of range
+   |
+10 |     invariant forall j :: 0 <= j < i ==> a[j] != key
+   |                                           ^
+
+
+Dafny program verifier finished with 1 verified, 1 error
+
+===== Round 3: model's body =====
+{
+  i := 0;
+  while i < a.Length
+    invariant 0 <= i <= a.Length
+    invariant forall j :: 0 <= j < i ==> a[j] != key
+  {
+    if a[i] == key { return; }
+    i := i + 1;
+  }
+  i := -1;
+}
+
+----- Round 3: verifier says -----
+Dafny program verifier finished with 2 verified, 0 errors
+
+VERIFIED in 3 round(s).
